@@ -16,6 +16,7 @@ export interface Node extends FlowBase {
   recipe?: Recipe;
   machines?: string;
   machineId?: string;
+  machineCount?: number;
 
   stepId: string;
   viewBox: string;

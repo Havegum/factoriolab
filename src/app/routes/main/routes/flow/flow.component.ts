@@ -59,6 +59,7 @@ import {
 import { LabState, Preferences } from '~/store';
 import { MainSharedModule } from '../../main-shared.module';
 import { FlowSettingsComponent } from './components/flow-settings/flow-settings.component';
+import rebuildAlternativeBoxLine from './alternative-box';
 
 export const SVG_ID = 'lab-flow-svg';
 const NODE_WIDTH = 32;
@@ -151,8 +152,10 @@ export class FlowComponent implements AfterViewInit {
     if (flowData.nodes.length && flowData.links.length) {
       if (flowSettings.diagram === FlowDiagram.Sankey) {
         this.rebuildSankey(flowData, flowSettings);
-      } else {
+      } else if (flowSettings.diagram === FlowDiagram.BoxLine) {
         this.rebuildBoxLine(flowData, themeValues);
+      } else if (flowSettings.diagram === FlowDiagram.AlternativeBoxLine) {
+        this.rebuildAlternativeBoxLine(flowData, themeValues);
       }
     }
 
@@ -309,6 +312,10 @@ export class FlowComponent implements AfterViewInit {
       .attr('href', (d) => coalesce(d.href, ''));
 
     this.svg = svg;
+  }
+
+  rebuildAlternativeBoxLine(flow: FlowData, themeValues: ThemeValues): void {
+    rebuildAlternativeBoxLine(flow, themeValues, this);
   }
 
   rebuildBoxLine(flow: FlowData, themeValues: ThemeValues): void {

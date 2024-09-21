@@ -63,6 +63,8 @@
     "primeicons": "^7.0.0",
     "primeng": "^17.18.4",
     "rxjs": "~7.8.0",
+    "svg-round-corners": "^0.4.3",
+    "tippy.js": "^6.3.7",
     "tslib": "^2.6.2",
     "vis-data": "^7.1.6",
     "vis-network": "^9.1.8",

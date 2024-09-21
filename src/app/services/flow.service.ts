@@ -203,6 +203,8 @@ export class FlowService {
           id,
           name: recipe.name,
           text: `${step.machines.toString(machinePrec)} ${machine.name}`,
+          machines: machine.name,
+          machineCount: step.machines.toNumber(),
           color: icon.color,
           stepId: step.id,
           viewBox: this.viewBox(icon),

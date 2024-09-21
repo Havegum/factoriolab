@@ -108,7 +108,11 @@
       "recipes": "Recipes"
     },
     "theme": { "light": "Light", "dark": "Dark (Default)", "black": "Black" },
-    "flowDiagram": { "sankey": "Sankey", "boxLine": "Box-line" },
+    "flowDiagram": {
+      "sankey": "Sankey",
+      "boxLine": "Box-line",
+      "alternativeBoxLine": "Alternative box-line"
+    },
     "linkValue": {
       "none": "None",
       "percent": "Percent",
