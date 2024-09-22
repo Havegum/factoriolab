@@ -15,6 +15,7 @@ import { debounce, map, of, Subject, tap, timer } from 'rxjs';
 
 import { filterNullish } from '~/helpers';
 import { rational, Rational } from '~/models';
+import { parseRationalExpression } from '~/models/rational-expression';
 
 type EventType = 'input' | 'blur' | 'enter';
 
@@ -73,10 +74,11 @@ export class InputNumberComponent implements OnInit, OnChanges {
   // If last value is nullish (invalid), do not emit
   emitFilteredValues$ = this.setValue$.pipe(
     takeUntilDestroyed(),
+    tap((v) => console.log(v)),
     debounce((e) => (e.type === 'input' ? timer(300) : of({}))),
     map((e) => e.value),
     filterNullish(),
-    tap((v) => this.setValue.emit(rational(v))),
+    tap((v) => this.setValue.emit(parseRationalExpression(v))),
   );
 
   ngOnInit(): void {
@@ -85,14 +87,16 @@ export class InputNumberComponent implements OnInit, OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (!changes['value']) return;
-    if (!this._value || !rational(this._value).eq(this.value()))
+    if (!this._value || !parseRationalExpression(this._value).eq(this.value()))
       this._value = this.value().toString();
   }
 
   changeValue(type: EventType): void {
     try {
       let value = this._value;
-      const rat = rational(value);
+
+      const rat = parseRationalExpression(value);
+      // const rat = rational(value);
       const min = this.minimum();
       const max = this.maximum();
       if ((min == null || rat.gte(min)) && (max == null || rat.lte(max))) {
