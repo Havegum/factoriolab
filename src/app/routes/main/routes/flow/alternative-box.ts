@@ -43,18 +43,27 @@ export default function rebuildAlternativeBoxLine(
     children: flow.nodes.map((n) => {
       const producer = n.recipe?.producers?.[0];
 
-      const padding = 10;
-      const paddingTop = 40;
+      const padding = 40;
+      const paddingTop = 80;
+      const marginX = 40;
 
       const producerData = sizes[producer ?? 'DEFAULT'] ?? sizes['DEFAULT'];
 
+      if (n.machineCount === undefined) {
+        return {
+          id: n.id,
+          height: 200,
+          width: 200 + marginX * 2,
+          color: n.color,
+          marginX: marginX,
+          machinesArray: [],
+        };
+      }
       const floatMachineCount = coalesce(n.machineCount, 1);
       const count = Math.ceil(floatMachineCount);
 
-      // This is an option, but if we want to bias towards more columns, we can do this:
       let columns = Math.min(count, Math.ceil(Math.sqrt(count) * 1.5));
 
-      // If the resultant rows are more than 1, we want to row count to be an even number:
       const rows = Math.ceil(count / columns);
       if (rows > 1 && rows % 2 === 1) {
         columns = Math.ceil(count / (rows - 1));
@@ -70,14 +79,20 @@ export default function rebuildAlternativeBoxLine(
           Math.ceil(count / columns) +
         padding +
         paddingTop +
-        Math.ceil(Math.ceil(count / columns) / 2) * rowPadding;
+        Math.ceil(Math.ceil(count / columns) / 2) * rowPadding -
+        machinePadding -
+        rowPadding;
 
       const width =
-        (producerData.width * 10 + machinePadding) * columns + padding * 2;
+        (producerData.width * 10 + machinePadding) * columns +
+        padding * 2 +
+        marginX * 2 -
+        machinePadding;
 
       return {
         id: n.id,
         columns,
+        marginX,
         height,
         width,
         machinesArray: Array.from({ length: count }).map((_, i) => ({
@@ -102,14 +117,21 @@ export default function rebuildAlternativeBoxLine(
       id: '',
       sources: [l.source],
       targets: [l.target],
+      layoutOptions: {
+        // 'org.eclipse.elk.edge.thickness': '0',
+        // 'org.eclipse.elk.port.side': 'SOUTH',
+      },
     })),
 
     layoutOptions: {
       'elk.algorithm': 'org.eclipse.elk.layered',
-      // 'org.eclipse.elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
-      'org.eclipse.elk.edgeRouting': 'ORTHOGONAL',
-      'org.eclipse.elk.layered.spacing.baseValue': '80',
-      'org.eclipse.elk.spacing.edgeNode': '120',
+      'org.eclipse.elk.layered.spacing.baseValue': '100',
+      'org.eclipse.elk.spacing.edgeNode': '125',
+      'org.eclipse.elk.layered.spacing.edgeEdgeBetweenLayers': '50',
+      'org.eclipse.elk.port.borderOffset': '500',
+      // 'org.eclipse.elk.layered.mergeEdges': 'true',
+      'org.eclipse.elk.portConstraints': 'FIXED_POS',
+      'org.eclipse.elk.port.side': 'SOUTH',
     },
   };
 
@@ -146,6 +168,7 @@ export default function rebuildAlternativeBoxLine(
           data.edges.map((d) => {
             const source = d.sources?.[0];
             const sourceData = flow.links.find((l) => l.source === source);
+
             const cmds =
               d.sections?.flatMap((s) =>
                 [s.startPoint, ...(s.bendPoints ?? []), s.endPoint].map(
@@ -161,7 +184,25 @@ export default function rebuildAlternativeBoxLine(
 
             const { path } = roundCommands(cmds, 15);
 
-            return { ...sourceData, ...d, path };
+            const ends = d.sections?.flatMap((s) => {
+              const path = [s.startPoint, ...(s.bendPoints ?? []), s.endPoint];
+              const end = path[path.length - 1];
+              const penultimate = path[path.length - 2];
+
+              const endVector = {
+                x: end.x - penultimate.x,
+                y: end.y - penultimate.y,
+              };
+
+              const length = Math.sqrt(endVector.x ** 2 + endVector.y ** 2);
+
+              endVector.x /= length;
+              endVector.y /= length;
+
+              return { end, endVector };
+            });
+
+            return { ...sourceData, ...d, path, ends };
           }),
         )
         .join('g');
@@ -169,19 +210,43 @@ export default function rebuildAlternativeBoxLine(
       g.append('path')
         .attr('d', (d) => d.path)
         .attr('fill', 'none')
-        .attr('stroke', '#1e1e1e')
-        .attr('stroke-width', (d) => Math.log(d.value ?? 2) * 3.5 + 5)
-        .attr('stroke-linejoin', 'round')
-        .attr('stroke-linecap', 'round');
+        .attr('stroke', 'var(--surface-a)')
+        .attr('stroke-width', (d) => Math.log((d.value ?? 1) + 10) * 4 + 1)
+        .attr('stroke-linejoin', 'round');
 
       g.append('path')
         .attr('d', (d) => d.path)
         .attr('fill', 'none')
         .attr('stroke', (d) => d.color ?? 'black')
-        .attr('stroke-width', (d) => Math.log(d.value ?? 1) * 3.5 + 2)
+        .attr('stroke-width', (d) => Math.log((d.value ?? 1) + 10) * 4 + 0)
         .attr('stroke-opacity', 0.6)
-        .attr('stroke-linejoin', 'round')
-        .attr('stroke-linecap', 'round');
+        .attr('stroke-linejoin', 'round');
+
+      g.selectAll('path.ends')
+        .data((d) => (d.ends ?? []).map((e) => ({ ...d, ...e })))
+        .join('path')
+        .attr('d', ({ end, endVector }) => {
+          const arrowLength = 40;
+          const arrowWidth = 20;
+          const arrow = [
+            {
+              x: end.x + arrowLength * endVector.x,
+              y: end.y + arrowLength * endVector.y,
+            },
+            {
+              x: end.x + arrowWidth * endVector.y,
+              y: end.y - arrowWidth * endVector.x,
+            },
+            {
+              x: end.x - arrowWidth * endVector.y,
+              y: end.y + arrowWidth * endVector.x,
+            },
+          ];
+
+          return `M ${arrow.map(({ x, y }) => `${x},${y}`).join('L')} Z`;
+        })
+        .attr('fill', (d) => d.color ?? 'black')
+        .attr('stroke', 'var(--surface-a)');
     }
 
     if (graph.children?.length) {
@@ -192,11 +257,12 @@ export default function rebuildAlternativeBoxLine(
         .data(
           graph.children.map((c) => {
             const item = flow.nodes.find((n) => n.id === c.id);
-            return { ...c, ...item };
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return { ...c, ...item } as any;
           }),
         )
         .join('g')
-        .attr('transform', (d) => `translate(${d.x}, ${d.y})`)
+        .attr('transform', (d) => `translate(${d.x + d.marginX * 2}, ${d.y})`)
         .attr('data-id', (d) => d.id);
 
       tippy(rect.nodes() as Element[], {
@@ -204,7 +270,6 @@ export default function rebuildAlternativeBoxLine(
           const id = reference.getAttribute('data-id');
 
           const item = flow.nodes.find((n) => n.id === id);
-          console.log(item);
           return `
                 <div>
                   <div>${item?.name}</div>
@@ -222,13 +287,16 @@ export default function rebuildAlternativeBoxLine(
 
       rect
         .append('rect')
-        .attr('width', (d) => d.width ?? 100)
+        .attr('width', (d) => (d.width ?? 100) - d.marginX * 2)
         .attr('height', (d) => d.height ?? 100)
         .attr('rx', 5)
         .attr('ry', 5)
         .attr('fill', (d) => d.color ?? 'black')
         .attr('stroke', (d) => d.color ?? 'black')
-        .attr('stroke-width', 2);
+        .attr('stroke-width', 2)
+        .filter((d) => d.machinesArray.length === 0)
+        .attr('transform', 'rotate(45) scale(0.5)')
+        .attr('transform-origin', '100 100');
 
       rect
         .append('text')
@@ -242,7 +310,6 @@ export default function rebuildAlternativeBoxLine(
       // For each `machineCount`, we draw a rect of the producer type size:
       const machines = rect
         .selectAll('g.machine')
-        // @ts-expect-error - `machinesArray` is added to the data object
         .data((d) => d.machinesArray as MachineData[])
         .join('g')
         .attr('class', 'machine')
@@ -262,7 +329,6 @@ export default function rebuildAlternativeBoxLine(
         .append('rect')
         .attr('rx', 5)
         .attr('ry', 5)
-
         .attr('width', (d) => d.width)
         .attr('height', (d) => d.height)
         .attr('fill', 'none')
