@@ -128,10 +128,6 @@ export default function rebuildAlternativeBoxLine(
       'org.eclipse.elk.layered.spacing.baseValue': '100',
       'org.eclipse.elk.spacing.edgeNode': '125',
       'org.eclipse.elk.layered.spacing.edgeEdgeBetweenLayers': '50',
-      'org.eclipse.elk.port.borderOffset': '500',
-      // 'org.eclipse.elk.layered.mergeEdges': 'true',
-      'org.eclipse.elk.portConstraints': 'FIXED_POS',
-      'org.eclipse.elk.port.side': 'SOUTH',
     },
   };
 
@@ -211,7 +207,7 @@ export default function rebuildAlternativeBoxLine(
         .attr('d', (d) => d.path)
         .attr('fill', 'none')
         .attr('stroke', 'var(--surface-a)')
-        .attr('stroke-width', (d) => Math.log((d.value ?? 1) + 10) * 4 + 1)
+        .attr('stroke-width', (d) => Math.log((d.value ?? 1) + 10) * 4 + 10)
         .attr('stroke-linejoin', 'round');
 
       g.append('path')
@@ -225,9 +221,9 @@ export default function rebuildAlternativeBoxLine(
       g.selectAll('path.ends')
         .data((d) => (d.ends ?? []).map((e) => ({ ...d, ...e })))
         .join('path')
-        .attr('d', ({ end, endVector }) => {
+        .attr('d', ({ end, endVector, ...d }) => {
           const arrowLength = 40;
-          const arrowWidth = 20;
+          const arrowWidth = Math.log((d.value ?? 1) + 10) * 2 + 5;
           const arrow = [
             {
               x: end.x + arrowLength * endVector.x,
